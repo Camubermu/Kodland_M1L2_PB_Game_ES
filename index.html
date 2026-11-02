@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Kodland Score Rush</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #070b12;
+        --panel: #0f1622ee;
+        --cyan: #3dfff3;
+        --amber: #ffb020;
+        --hot: #ff4d6d;
+        --lime: #b6ff4d;
+        --violet: #a78bfa;
+        --ink: #e8f1ff;
+        --mute: #6d7d96;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        overflow: hidden;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+      }
+
+      .app {
+        position: relative;
+        width: min(100vw, 960px);
+        height: min(100vh, 640px);
+        border-radius: 20px;
+        overflow: hidden;
+        background: #05080f;
+        box-shadow: 0 0 0 1px #ffffff14;
+      }
+
+      @media (max-width: 700px), (max-height: 700px) {
+        .app {
+          width: 100vw;
+          height: 100vh;
+          border-radius: 0;
+        }
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: none;
+        touch-action: none;
+      }
+
+      .hud {
+        position: absolute;
+        inset: 0 0 auto 0;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 12px 14px;
+        pointer-events: none;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 14px;
+        background: var(--panel);
+        border: 1px solid #ffffff18;
+        backdrop-filter: blur(10px);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: clamp(0.8rem, 2.1vw, 1.05rem);
+        font-weight: 600;
+      }
+
+      .chip .label {
+        color: var(--mute);
+        font-size: 0.7em;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .chip .val {
+        color: var(--cyan);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .chip.amber .val {
+        color: var(--amber);
+      }
+
+      .chip.hot .val {
+        color: var(--hot);
+      }
+
+      .lives {
+        display: flex;
+        gap: 4px;
+        font-size: 1rem;
+        letter-spacing: 1px;
+      }
+
+      .toast {
+        position: absolute;
+        left: 50%;
+        top: 20%;
+        transform: translate(-50%, -50%) scale(0.92);
+        z-index: 3;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: #061018cc;
+        border: 1px solid #3dfff355;
+        color: var(--cyan);
+        font-family: "IBM Plex Mono", monospace;
+        font-weight: 600;
+        font-size: clamp(0.8rem, 2vw, 1rem);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .toast.bad {
+        color: var(--hot);
+        border-color: #ff4d6d55;
+      }
+
+      .toast.good {
+        color: var(--lime);
+        border-color: #b6ff4d55;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 4;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(ellipse 70% 50% at 50% 35%, #12304a88 0%, transparent 60%),
+          #05080fee;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .overlay.hidden {
+        display: none;
+      }
+
+      .brand-mark {
+        margin: 0 0 4px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--mute);
+      }
+
+      .brand {
+        margin: 0 0 10px;
+        font-size: clamp(2rem, 7vw, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        color: #fff;
+      }
+
+      .brand span {
+        color: var(--cyan);
+      }
+
+      .legend {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 18px;
+      }
+
+      .legend i {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #ffffff22;
+        background: #0c1420;
+        font-style: normal;
+        font-size: 1.1rem;
+      }
+
+      .play {
+        appearance: none;
+        border: 0;
+        min-width: 180px;
+        padding: 16px 36px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #6afff5, #2de0d4);
+        color: #041018;
+        font: 700 1.2rem/1 "Space Grotesk", system-ui, sans-serif;
+        cursor: pointer;
+        box-shadow: 0 0 0 1px #ffffff22, 0 12px 40px #3dfff355;
+      }
+
+      .play:hover {
+        filter: brightness(1.06);
+      }
+
+      .play:active {
+        transform: translateY(2px) scale(0.98);
+      }
+
+      .keys {
+        margin-top: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        color: var(--mute);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.78rem;
+      }
+
+      .keys kbd {
+        display: inline-grid;
+        place-items: center;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 8px;
+        border-radius: 8px;
+        border: 1px solid #ffffff22;
+        background: #101826;
+        color: var(--ink);
+      }
+
+      .result {
+        margin: 0 0 8px;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: clamp(1.3rem, 4.5vw, 1.9rem);
+        color: var(--cyan);
+      }
+
+      .bestline {
+        margin: 0 0 16px;
+        color: var(--amber);
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.95rem;
+      }
+
+      .flash {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+        opacity: 0;
+        mix-blend-mode: soft-light;
+      }
+
+      .power {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        z-index: 2;
+        display: flex;
+        gap: 6px;
+        pointer-events: none;
+      }
+
+      .power span {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #0f1622cc;
+        border: 1px solid #ffffff22;
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 0.72rem;
+        color: var(--ink);
+        opacity: 0;
+        transform: translateY(6px);
+        transition: 0.15s ease;
+      }
+
+      .power span.on {
+        opacity: 1;
+        transform: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="hud">
+        <div class="chip">
+          <div>
+            <div class="label">puntos</div>
+            <div class="val" id="scoreVal">0</div>
+          </div>
+        </div>
+        <div class="chip amber">
+          <div>
+            <div class="label">récord</div>
+            <div class="val" id="bestVal">0</div>
+          </div>
+        </div>
+        <div class="chip amber">
+          <div>
+            <div class="label">tiempo</div>
+            <div class="val" id="timeVal">3:00</div>
+          </div>
+        </div>
+        <div class="chip hot">
+          <div>
+            <div class="label">vidas</div>
+            <div class="val lives" id="livesVal">❤❤❤</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="power" id="powerBar">
+        <span id="pShield">🛡 escudo</span>
+        <span id="pSlow">❄ lento</span>
+        <span id="pMagnet">🧲 imán</span>
+        <span id="pMulti">×2</span>
+      </div>
+
+      <div class="toast" id="toast"></div>
+      <div class="flash" id="flash"></div>
+      <canvas id="game" width="960" height="640" aria-label="Kodland Score Rush"></canvas>
+
+      <div class="overlay" id="overlay">
+        <div>
+          <p class="brand-mark">Kodland</p>
+          <h1 class="brand">Score <span>Rush</span></h1>
+          <div class="legend" aria-hidden="true">
+            <i title="gema" style="color: var(--cyan)">◆</i>
+            <i title="bonus" style="color: var(--lime)">★</i>
+            <i title="corazón" style="color: var(--hot)">❤</i>
+            <i title="enemigo" style="color: var(--hot)">👾</i>
+            <i title="obstáculo" style="color: var(--violet)">▬</i>
+          </div>
+          <p class="result hidden" id="resultLine"></p>
+          <p class="bestline" id="bestLine">récord 0</p>
+          <button class="play" type="button" id="startBtn">JUGAR</button>
+          <div class="keys">
+            <kbd>←</kbd><kbd>→</kbd>
+            <span>o arrastra · 3:00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("scoreVal");
+        const bestEl = document.getElementById("bestVal");
+        const timeEl = document.getElementById("timeVal");
+        const livesEl = document.getElementById("livesVal");
+        const toastEl = document.getElementById("toast");
+        const flashEl = document.getElementById("flash");
+        const overlay = document.getElementById("overlay");
+        const resultLine = document.getElementById("resultLine");
+        const bestLine = document.getElementById("bestLine");
+        const startBtn = document.getElementById("startBtn");
+        const pShield = document.getElementById("pShield");
+        const pSlow = document.getElementById("pSlow");
+        const pMagnet = document.getElementById("pMagnet");
+        const pMulti = document.getElementById("pMulti");
+
+        const W = canvas.width;
+        const H = canvas.height;
+        const ROUND = 180;
+        const BEST_KEY = "kodland-score-rush-best-v3";
+
+        let score = 0;
+        let best = Number(localStorage.getItem(BEST_KEY) || 0);
+        let lives = 3;
+        let combo = 0;
+        let timeLeft = ROUND;
+        let running = false;
+        let lastTs = 0;
+        let spawnAcc = 0;
+        let enemyAcc = 0;
+        let obstacleAcc = 0;
+        let shake = 0;
+        let flash = 0;
+        let flashColor = "#3dfff3";
+        let toastT = 0;
+        let invuln = 0;
+        const BONUS_ES = { shield: "escudo", slow: "lento", magnet: "imán", multi: "×2" };
+        let powers = { shield: 0, slow: 0, magnet: 0, multi: 0 };
+        let hero = { x: W / 2, y: H - 72, w: 64, h: 34, vx: 0 };
+        let entities = [];
+        let particles = [];
+        let floaters = [];
+        let trails = [];
+        let rings = [];
+        let stars = Array.from({ length: 80 }, () => ({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          z: 0.3 + Math.random() * 1.2,
+          a: 0.2 + Math.random() * 0.6,
+        }));
+        let keys = new Set();
+        let pointerX = null;
+
+        bestEl.textContent = String(best);
+        bestLine.textContent = `récord ${best}`;
+
+        function fmtTime(t) {
+          const s = Math.max(0, Math.ceil(t));
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          return `${m}:${String(r).padStart(2, "0")}`;
+        }
+
+        function hearts(n) {
+          return "❤".repeat(Math.max(0, n)) + "♡".repeat(Math.max(0, 3 - n));
+        }
+
+        function showToast(text, kind = "") {
+          toastEl.textContent = text;
+          toastEl.classList.remove("bad", "good");
+          if (kind) toastEl.classList.add(kind);
+          toastEl.classList.add("show");
+          toastT = 0.9;
+        }
+
+        function bumpBest() {
+          if (score > best) {
+            best = score;
+            localStorage.setItem(BEST_KEY, String(best));
+            bestEl.textContent = String(best);
+            bestLine.textContent = `récord ${best}`;
+            return true;
+          }
+          return false;
+        }
+
+        function resetRound() {
+          score = 0;
+          lives = 3;
+          combo = 0;
+          timeLeft = ROUND;
+          entities = [];
+          particles = [];
+          floaters = [];
+          trails = [];
+          rings = [];
+          powers = { shield: 0, slow: 0, magnet: 0, multi: 0 };
+          hero.x = W / 2;
+          hero.vx = 0;
+          spawnAcc = enemyAcc = obstacleAcc = 0;
+          shake = flash = invuln = 0;
+          scoreEl.textContent = "0";
+          timeEl.textContent = fmtTime(ROUND);
+          livesEl.textContent = hearts(3);
+          toastEl.classList.remove("show");
+          syncPowers();
+        }
+
+        function syncPowers() {
+          pShield.classList.toggle("on", powers.shield > 0);
+          pSlow.classList.toggle("on", powers.slow > 0);
+          pMagnet.classList.toggle("on", powers.magnet > 0);
+          pMulti.classList.toggle("on", powers.multi > 0);
+        }
+
+        function startGame() {
+          resetRound();
+          running = true;
+          overlay.classList.add("hidden");
+          resultLine.classList.add("hidden");
+          lastTs = performance.now();
+          requestAnimationFrame(loop);
+        }
+
+        function endGame(reason) {
+          running = false;
+          const isBest = bumpBest();
+          resultLine.textContent = isBest ? `¡NUEVO RÉCORD!  ${score}` : `puntos = ${score}`;
+          resultLine.classList.remove("hidden");
+          bestLine.textContent = reason === "time" ? `¡se acabó el tiempo! · récord ${best}` : `récord ${best}`;
+          startBtn.textContent = "OTRA VEZ";
+          overlay.classList.remove("hidden");
+        }
+
+        function burst(x, y, color, n = 14) {
+          for (let i = 0; i < n; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 70 + Math.random() * 240;
+            particles.push({
+              x,
+              y,
+              vx: Math.cos(a) * s,
+              vy: Math.sin(a) * s - 50,
+              life: 0.35 + Math.random() * 0.5,
+              size: 2 + Math.random() * 3.5,
+              color,
+            });
+          }
+        }
+
+        function addFloater(x, y, text, color) {
+          floaters.push({ x, y, text, color, life: 0.9 });
+        }
+
+        function ring(x, y, color) {
+          rings.push({ x, y, r: 8, life: 0.35, color });
+        }
+
+        function spawnFalling() {
+          const roll = Math.random();
+          let type = "gem";
+          if (roll > 0.92) type = "heart";
+          else if (roll > 0.78) type = "bonus";
+          else if (roll > 0.62) type = "enemy";
+          else if (roll > 0.48) type = "obstacle";
+
+          const speedMul = powers.slow > 0 ? 0.55 : 1;
+          const base = {
+            x: 40 + Math.random() * (W - 80),
+            y: -30,
+            vy: (120 + Math.random() * 150 + (ROUND - timeLeft) * 0.7) * speedMul,
+            spin: Math.random() * Math.PI * 2,
+            pulse: Math.random() * Math.PI * 2,
+            type,
+          };
+
+          if (type === "gem") {
+            entities.push({ ...base, r: 11 + Math.random() * 6, kind: "gem" });
+          } else if (type === "bonus") {
+            const bonus = ["shield", "slow", "magnet", "multi"][(Math.random() * 4) | 0];
+            entities.push({ ...base, r: 13, kind: "bonus", bonus, vy: base.vy * 0.9 });
+          } else if (type === "heart") {
+            entities.push({ ...base, r: 12, kind: "heart", vy: base.vy * 0.85 });
+          } else if (type === "enemy") {
+            entities.push({
+              ...base,
+              r: 14,
+              kind: "enemy",
+              vx: (Math.random() > 0.5 ? 1 : -1) * (40 + Math.random() * 70),
+              vy: base.vy * 0.95,
+            });
+          } else {
+            const w = 50 + Math.random() * 90;
+            entities.push({
+              ...base,
+              kind: "obstacle",
+              w,
+              h: 16,
+              x: 30 + Math.random() * (W - 60 - w),
+              vy: base.vy * 0.8,
+            });
+          }
+        }
+
+        function hitDamage(x, y) {
+          if (invuln > 0) return;
+          if (powers.shield > 0) {
+            powers.shield = 0;
+            invuln = 0.8;
+            syncPowers();
+            showToast("escudo roto", "bad");
+            burst(x, y, "#a78bfa", 18);
+            ring(x, y, "#a78bfa");
+            shake = 8;
+            return;
+          }
+          lives -= 1;
+          livesEl.textContent = hearts(lives);
+          invuln = 1.1;
+          combo = 0;
+          showToast("¡golpe!  -1 vida", "bad");
+          burst(x, y, "#ff4d6d", 22);
+          ring(hero.x, hero.y, "#ff4d6d");
+          shake = 12;
+          flash = 0.2;
+          flashColor = "#ff4d6d";
+          if (lives <= 0) endGame("dead");
+        }
+
+        function collect(e) {
+          if (e.kind === "gem") {
+            combo += 1;
+            let gain = combo >= 10 ? 3 : combo >= 5 ? 2 : 1;
+            if (powers.multi > 0) gain *= 2;
+            score += gain;
+            scoreEl.textContent = String(score);
+            bumpBest();
+            showToast(gain > 1 ? `puntos += ${gain}` : "puntos += 1");
+            burst(e.x, e.y, "#3dfff3", 16);
+            burst(e.x, e.y, "#ffb020", 6);
+            addFloater(e.x, e.y - 10, `+${gain}`, "#3dfff3");
+            ring(e.x, e.y, "#3dfff3");
+            shake = 4 + gain;
+            flash = 0.12;
+            flashColor = "#3dfff3";
+          } else if (e.kind === "bonus") {
+            const map = { shield: 6, slow: 5, magnet: 5, multi: 6 };
+            powers[e.bonus] = map[e.bonus];
+            syncPowers();
+            showToast(BONUS_ES[e.bonus].toUpperCase(), "good");
+            burst(e.x, e.y, "#b6ff4d", 20);
+            addFloater(e.x, e.y - 10, BONUS_ES[e.bonus], "#b6ff4d");
+            ring(e.x, e.y, "#b6ff4d");
+            flash = 0.15;
+            flashColor = "#b6ff4d";
+          } else if (e.kind === "heart") {
+            if (lives < 3) {
+              lives += 1;
+              livesEl.textContent = hearts(lives);
+              showToast("+1 vida", "good");
+            } else {
+              score += 5;
+              scoreEl.textContent = String(score);
+              bumpBest();
+              showToast("puntos += 5", "good");
+            }
+            burst(e.x, e.y, "#ff4d6d", 16);
+            addFloater(e.x, e.y - 10, "❤", "#ff4d6d");
+          }
+        }
+
+        function overlapsHero(e) {
+          if (e.kind === "obstacle") {
+            return (
+              Math.abs(e.x + e.w / 2 - hero.x) < hero.w * 0.42 + e.w / 2 &&
+              Math.abs(e.y + e.h / 2 - hero.y) < hero.h * 0.4 + e.h / 2
+            );
+          }
+          return (
+            Math.abs(e.x - hero.x) < hero.w * 0.42 + e.r &&
+            Math.abs(e.y - hero.y) < hero.h * 0.4 + e.r
+          );
+        }
+
+        function update(dt) {
+          timeLeft -= dt;
+          if (timeLeft <= 0) {
+            timeLeft = 0;
+            timeEl.textContent = "0:00";
+            endGame("time");
+            return;
+          }
+          timeEl.textContent = fmtTime(timeLeft);
+
+          if (toastT > 0) {
+            toastT -= dt;
+            if (toastT <= 0) toastEl.classList.remove("show");
+          }
+          flash = Math.max(0, flash - dt);
+          flashEl.style.background = flashColor;
+          flashEl.style.opacity = String(flash * 0.5);
+          invuln = Math.max(0, invuln - dt);
+          shake = Math.max(0, shake - dt * 28);
+
+          for (const k of Object.keys(powers)) {
+            if (powers[k] > 0) {
+              powers[k] = Math.max(0, powers[k] - dt);
+            }
+          }
+          syncPowers();
+
+          let targetVx = 0;
+          if (keys.has("ArrowLeft") || keys.has("a")) targetVx -= 480;
+          if (keys.has("ArrowRight") || keys.has("d")) targetVx += 480;
+          if (pointerX != null) targetVx = Math.max(-540, Math.min(540, (pointerX - hero.x) * 9));
+          hero.vx += (targetVx - hero.vx) * Math.min(1, dt * 16);
+          hero.x += hero.vx * dt;
+          hero.x = Math.max(40, Math.min(W - 40, hero.x));
+          trails.push({ x: hero.x, y: hero.y, life: 0.22 });
+          if (trails.length > 20) trails.shift();
+
+          const difficulty = 1 + (ROUND - timeLeft) / ROUND;
+          spawnAcc += dt;
+          enemyAcc += dt;
+          obstacleAcc += dt;
+          const fallEvery = Math.max(0.2, 0.55 / difficulty);
+          while (spawnAcc >= fallEvery) {
+            spawnAcc -= fallEvery;
+            spawnFalling();
+          }
+
+          for (const s of stars) {
+            s.y += (14 + (powers.slow > 0 ? -4 : 0)) * s.z * dt;
+            if (s.y > H) {
+              s.y = -4;
+              s.x = Math.random() * W;
+            }
+          }
+
+          const slow = powers.slow > 0 ? 0.6 : 1;
+          entities = entities.filter((e) => {
+            e.y += e.vy * slow * dt;
+            e.spin += dt * 3;
+            e.pulse += dt * 5;
+            if (e.kind === "enemy") {
+              e.x += e.vx * slow * dt;
+              if (e.x < 20 || e.x > W - 20) e.vx *= -1;
+              // slight chase
+              e.x += Math.sign(hero.x - e.x) * 25 * dt * slow;
+            }
+            if (powers.magnet > 0 && (e.kind === "gem" || e.kind === "bonus" || e.kind === "heart")) {
+              e.x += (hero.x - e.x) * 3.2 * dt;
+              e.y += (hero.y - e.y) * 1.4 * dt;
+            }
+
+            const bottom =
+              e.kind === "obstacle" ? e.y - e.h > H + 40 : e.y - (e.r || 0) > H + 40;
+            if (bottom) {
+              if (e.kind === "gem") combo = 0;
+              return false;
+            }
+
+            if (overlapsHero(e)) {
+              if (e.kind === "enemy" || e.kind === "obstacle") {
+                hitDamage(e.x, e.y);
+                burst(e.x, e.y, "#ff4d6d", 12);
+                return e.kind !== "obstacle";
+              }
+              collect(e);
+              return false;
+            }
+            return true;
+          });
+
+          particles = particles.filter((p) => {
+            p.life -= dt;
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += 260 * dt;
+            return p.life > 0;
+          });
+          floaters = floaters.filter((f) => {
+            f.life -= dt;
+            f.y -= 40 * dt;
+            return f.life > 0;
+          });
+          trails = trails.filter((t) => {
+            t.life -= dt;
+            return t.life > 0;
+          });
+          rings = rings.filter((r) => {
+            r.life -= dt;
+            r.r += 90 * dt;
+            return r.life > 0;
+          });
+        }
+
+        function drawBg() {
+          const g = ctx.createLinearGradient(0, 0, 0, H);
+          g.addColorStop(0, "#0a1424");
+          g.addColorStop(0.55, "#070b12");
+          g.addColorStop(1, "#140a18");
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, W, H);
+          for (const s of stars) {
+            ctx.globalAlpha = s.a;
+            ctx.fillStyle = "#cfe6ff";
+            ctx.fillRect(s.x, s.y, s.z * 1.7, s.z * 1.7);
+          }
+          ctx.globalAlpha = 1;
+          const glow = ctx.createRadialGradient(hero.x, hero.y, 8, hero.x, hero.y, 200);
+          glow.addColorStop(0, powers.shield > 0 ? "#a78bfa22" : "#3dfff318");
+          glow.addColorStop(1, "transparent");
+          ctx.fillStyle = glow;
+          ctx.fillRect(0, 0, W, H);
+        }
+
+        function roundRect(x, y, w, h, r) {
+          ctx.beginPath();
+          ctx.moveTo(x + r, y);
+          ctx.arcTo(x + w, y, x + w, y + h, r);
+          ctx.arcTo(x + w, y + h, x, y + h, r);
+          ctx.arcTo(x, y + h, x, y, r);
+          ctx.arcTo(x, y, x + w, y, r);
+          ctx.closePath();
+        }
+
+        function drawHero() {
+          for (const t of trails) {
+            ctx.globalAlpha = t.life * 1.5;
+            ctx.fillStyle = powers.multi > 0 ? "#b6ff4d" : "#3dfff3";
+            ctx.beginPath();
+            ctx.ellipse(t.x, t.y + 4, 16 * t.life + 4, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = invuln > 0 && Math.floor(invuln * 20) % 2 === 0 ? 0.35 : 1;
+          ctx.save();
+          ctx.translate(hero.x, hero.y);
+          ctx.shadowColor = powers.shield > 0 ? "#a78bfaaa" : "#3dfff388";
+          ctx.shadowBlur = powers.shield > 0 ? 26 : 16;
+          const body = ctx.createLinearGradient(-30, -20, 30, 20);
+          body.addColorStop(0, "#1b3a4a");
+          body.addColorStop(1, "#0d2230");
+          ctx.fillStyle = body;
+          ctx.strokeStyle = powers.shield > 0 ? "#a78bfa" : "#3dfff3";
+          ctx.lineWidth = 2.5;
+          roundRect(-hero.w / 2, -hero.h / 2, hero.w, hero.h, 12);
+          ctx.fill();
+          ctx.stroke();
+          if (powers.shield > 0) {
+            ctx.strokeStyle = "#a78bfa88";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, hero.w * 0.7, hero.h * 0.95, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = "#ffb020";
+          ctx.beginPath();
+          ctx.arc(-12, -2, 3.5, 0, Math.PI * 2);
+          ctx.arc(12, -2, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          ctx.globalAlpha = 1;
+        }
+
+        function drawEntity(e) {
+          ctx.save();
+          if (e.kind === "obstacle") {
+            ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
+            ctx.shadowColor = "#a78bfaaa";
+            ctx.shadowBlur = 14;
+            const g = ctx.createLinearGradient(-e.w / 2, 0, e.w / 2, 0);
+            g.addColorStop(0, "#5b21b6");
+            g.addColorStop(0.5, "#a78bfa");
+            g.addColorStop(1, "#5b21b6");
+            ctx.fillStyle = g;
+            roundRect(-e.w / 2, -e.h / 2, e.w, e.h, 8);
+            ctx.fill();
+            ctx.restore();
+            return;
+          }
+
+          ctx.translate(e.x, e.y);
+          ctx.rotate(e.spin * 0.35);
+          const pulse = 0.7 + Math.sin(e.pulse) * 0.3;
+
+          if (e.kind === "gem") {
+            ctx.shadowColor = "#3dfff3aa";
+            ctx.shadowBlur = 16 * pulse;
+            ctx.fillStyle = `rgba(61,255,243,${0.12 * pulse})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, e.r * 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, e.r);
+            grad.addColorStop(0, "#eafffd");
+            grad.addColorStop(1, "#2ad8cc");
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+              const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+              const rad = i % 2 === 0 ? e.r : e.r * 0.5;
+              const px = Math.cos(a) * rad;
+              const py = Math.sin(a) * rad;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+          } else if (e.kind === "bonus") {
+            ctx.shadowColor = "#b6ff4daa";
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = "#b6ff4d";
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+              const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+              const a2 = a + Math.PI / 5;
+              ctx.lineTo(Math.cos(a) * e.r, Math.sin(a) * e.r);
+              ctx.lineTo(Math.cos(a2) * e.r * 0.45, Math.sin(a2) * e.r * 0.45);
+            }
+            ctx.closePath();
+            ctx.fill();
+          } else if (e.kind === "heart") {
+            ctx.shadowColor = "#ff4d6daa";
+            ctx.shadowBlur = 14;
+            ctx.fillStyle = "#ff4d6d";
+            ctx.beginPath();
+            ctx.moveTo(0, e.r * 0.35);
+            ctx.bezierCurveTo(e.r * 0.9, -e.r * 0.3, e.r * 1.1, e.r * 0.4, 0, e.r);
+            ctx.bezierCurveTo(-e.r * 1.1, e.r * 0.4, -e.r * 0.9, -e.r * 0.3, 0, e.r * 0.35);
+            ctx.fill();
+          } else if (e.kind === "enemy") {
+            ctx.shadowColor = "#ff4d6daa";
+            ctx.shadowBlur = 16;
+            ctx.fillStyle = "#ff4d6d";
+            roundRect(-e.r, -e.r * 0.75, e.r * 2, e.r * 1.5, 8);
+            ctx.fill();
+            ctx.fillStyle = "#220810";
+            ctx.beginPath();
+            ctx.arc(-e.r * 0.35, -e.r * 0.1, 3, 0, Math.PI * 2);
+            ctx.arc(e.r * 0.35, -e.r * 0.1, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#ffb020";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-e.r * 0.5, e.r * 0.35);
+            ctx.lineTo(e.r * 0.5, e.r * 0.35);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        function draw() {
+          ctx.save();
+          if (shake > 0) {
+            ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+          }
+          drawBg();
+          for (const e of entities) drawEntity(e);
+          drawHero();
+          for (const r of rings) {
+            ctx.globalAlpha = Math.max(0, r.life * 2);
+            ctx.strokeStyle = r.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          for (const p of particles) {
+            ctx.globalAlpha = Math.max(0, p.life * 2.2);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          for (const f of floaters) {
+            ctx.globalAlpha = Math.max(0, f.life);
+            ctx.fillStyle = f.color;
+            ctx.font = "700 20px Space Grotesk, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(f.text, f.x, f.y);
+          }
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+
+        function loop(ts) {
+          if (!running) return;
+          const dt = Math.min(0.033, (ts - lastTs) / 1000);
+          lastTs = ts;
+          update(dt);
+          draw();
+          if (running) requestAnimationFrame(loop);
+        }
+
+        function canvasX(clientX) {
+          const rect = canvas.getBoundingClientRect();
+          return ((clientX - rect.left) / rect.width) * W;
+        }
+
+        window.addEventListener("keydown", (e) => {
+          keys.add(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+          if (["ArrowLeft", "ArrowRight", " "].includes(e.key)) e.preventDefault();
+          if (!running && (e.key === "Enter" || e.key === " ")) startGame();
+        });
+        window.addEventListener("keyup", (e) => {
+          keys.delete(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+        });
+        canvas.addEventListener("pointerdown", (e) => {
+          pointerX = canvasX(e.clientX);
+          canvas.setPointerCapture(e.pointerId);
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          if (e.buttons || pointerX != null) pointerX = canvasX(e.clientX);
+        });
+        canvas.addEventListener("pointerup", () => {
+          pointerX = null;
+        });
+        canvas.addEventListener("pointercancel", () => {
+          pointerX = null;
+        });
+        startBtn.addEventListener("click", startGame);
+
+        function idle() {
+          if (running) return;
+          for (const s of stars) {
+            s.y += 0.25 * s.z;
+            if (s.y > H) {
+              s.y = 0;
+              s.x = Math.random() * W;
+            }
+          }
+          drawBg();
+          hero.x = W / 2 + Math.sin(performance.now() / 700) * 40;
+          drawHero();
+          requestAnimationFrame(idle);
+        }
+        idle();
+      })();
+    </script>
+  </body>
+</html>
